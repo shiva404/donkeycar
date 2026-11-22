@@ -1444,11 +1444,10 @@ class XboxOneJoystickController(JoystickController):
             'options': self.toggle_constant_throttle,
         }
 
-        # Driving layout: left stick X = steer, left stick Y = throttle.
-        # Also keep right stick Y and LT/RT (Forza-style) as throttle inputs.
+        # Driving layout: left stick X = steer, right stick Y = throttle.
+        # LT/RT also set throttle (Forza-style).
         self.axis_trigger_map = {
             'left_stick_horz': self.set_steering,
-            'left_stick_vert': self.set_throttle,
             'right_stick_vert': self.set_throttle,
             'right_trigger': self.magnitude(),
             'left_trigger': self.magnitude(reversed=True),
