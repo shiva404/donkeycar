@@ -274,7 +274,8 @@ def drive(cfg, model_path=None, use_joystick=False, model_type=None,
         batt = INA219BatteryMonitor(
             address=getattr(cfg, 'BATTERY_INA_ADDRESS', 0x41),
             busnum=getattr(cfg, 'BATTERY_INA_BUSNUM', 1),
-            log_every_s=getattr(cfg, 'BATTERY_LOG_EVERY_S', 5.0))
+            log_every_s=getattr(cfg, 'BATTERY_LOG_EVERY_S', 5.0),
+            cells=getattr(cfg, 'BATTERY_CELLS', None))
         V.add(batt, outputs=['battery/voltage', 'battery/current', 'battery/power'])
 
     # Use the FPV preview, which will show the cropped image output, or the full frame.
