@@ -1410,18 +1410,21 @@ class XboxOneJoystickController(JoystickController):
         return self.js is not None
 
 
-    def magnitude(self, reversed = False):
+    def magnitude(self, reversed=False):
         def set_magnitude(axis_val):
             '''
-            Maps raw axis values to magnitude.
+            Map trigger axis to throttle.
+            Supports -1..1 (rest at -1) and 0..1 (rest at 0) ranges from
+            different Xbox/Linux drivers (xpadneo vs others).
             '''
-            # Axis values range from -1. to 1.
-            minimum = -1.
-            maximum = 1.
-            # Magnitude is now normalized in the range of 0 - 1.
-            magnitude = (axis_val - minimum) / (maximum - minimum)
+            if axis_val < 0.0:
+                # classic -1..1 with rest near -1
+                magnitude = (axis_val + 1.0) / 2.0
+            else:
+                # 0..1 style with rest at 0
+                magnitude = axis_val
             if reversed:
-                magnitude *= -1
+                magnitude = -magnitude
             self.set_throttle(magnitude)
         return set_magnitude
 
@@ -1441,12 +1444,14 @@ class XboxOneJoystickController(JoystickController):
             'options': self.toggle_constant_throttle,
         }
 
+        # Driving layout: left stick X = steer, left stick Y = throttle.
+        # Also keep right stick Y and LT/RT (Forza-style) as throttle inputs.
         self.axis_trigger_map = {
             'left_stick_horz': self.set_steering,
+            'left_stick_vert': self.set_throttle,
             'right_stick_vert': self.set_throttle,
-            # Forza Mode
             'right_trigger': self.magnitude(),
-            'left_trigger': self.magnitude(reversed = True),
+            'left_trigger': self.magnitude(reversed=True),
         }
 
 class XboxOneSwappedJoystickController(XboxOneJoystickController):
