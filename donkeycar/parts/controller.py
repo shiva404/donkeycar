@@ -697,15 +697,23 @@ class XboxOneJoystick(Joystick):
     def __init__(self, *args, **kwargs):
         super(XboxOneJoystick, self).__init__(*args, **kwargs)
 
+        # Axis codes are Linux ABS_* values from JSIOCGAXMAP (joydev).
+        # xpadneo / modern Xbox Bluetooth Linux mapping:
+        #   ABS_X/Y = left stick, ABS_RX/RY = right stick, ABS_Z/RZ = LT/RT
+        # Older stock/xboxdrv layouts used ABS_Z/RZ for the right stick and
+        # different trigger codes; those are included as aliases below.
         self.axis_names = {
-            0x00 : 'left_stick_horz',
-            0x01 : 'left_stick_vert',
-            0x05 : 'right_stick_vert',
-            0x02 : 'right_stick_horz',
-            0x0a : 'left_trigger',
-            0x09 : 'right_trigger',
-            0x10 : 'dpad_horiz',
-            0x11 : 'dpad_vert'
+            0x00: 'left_stick_horz',   # ABS_X
+            0x01: 'left_stick_vert',   # ABS_Y
+            0x03: 'right_stick_horz',  # ABS_RX (xpadneo)
+            0x04: 'right_stick_vert',  # ABS_RY (xpadneo)
+            0x02: 'left_trigger',      # ABS_Z  (xpadneo LT)
+            0x05: 'right_trigger',     # ABS_RZ (xpadneo RT)
+            # Legacy aliases (non-xpadneo layouts)
+            0x0a: 'left_trigger',
+            0x09: 'right_trigger',
+            0x10: 'dpad_horiz',
+            0x11: 'dpad_vert',
         }
 
         self.button_names = {
