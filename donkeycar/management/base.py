@@ -231,6 +231,10 @@ class CalibrateCar(BaseCommand):
             c = PulseController(pwm_pin)
             input_prompt = "Enter a PWM setting to test ('q' for quit) (0-1500): "
             print()
+            print("Throttle tip: most ESCs need a DOUBLE tap for reverse.")
+            print("  stopped -> reverse -> stopped -> reverse")
+            print("If that never engages, reprogram the ESC for F/B/R mode.")
+            print()
 
         else:
             from donkeycar.parts.actuator import PCA9685
@@ -248,6 +252,14 @@ class CalibrateCar(BaseCommand):
             print(f"Using PWM freq: {freq}")
             c = PCA9685(channel, address=address, busnum=busnum, frequency=freq)
             input_prompt = "Enter a PWM setting to test ('q' for quit) (0-1500): "
+            print()
+            print("Throttle tip: most ESCs need a DOUBLE tap for reverse.")
+            print("  1) set STOPPED (e.g. 390)")
+            print("  2) set a reverse candidate (e.g. 330)")
+            print("  3) set STOPPED again (390)")
+            print("  4) set the same reverse candidate again (330)")
+            print("If reverse never engages after that, the ESC has reverse")
+            print("disabled in hardware and must be reprogrammed.")
             print()
 
         while True:
