@@ -268,6 +268,15 @@ def drive(cfg, model_path=None, use_joystick=False, model_type=None,
     # IMU
     add_imu(V, cfg)
 
+    # Battery / pack voltage (INA219)
+    if getattr(cfg, 'HAVE_BATTERY_MONITOR', False):
+        from donkeycar.parts.battery_monitor import INA219BatteryMonitor
+        batt = INA219BatteryMonitor(
+            address=getattr(cfg, 'BATTERY_INA_ADDRESS', 0x41),
+            busnum=getattr(cfg, 'BATTERY_INA_BUSNUM', 1),
+            log_every_s=getattr(cfg, 'BATTERY_LOG_EVERY_S', 5.0))
+        V.add(batt, outputs=['battery/voltage', 'battery/current', 'battery/power'])
+
     # Use the FPV preview, which will show the cropped image output, or the full frame.
     if cfg.USE_FPV:
         V.add(WebFpv(), inputs=['cam/image_array'], threaded=True)
@@ -530,6 +539,10 @@ def drive(cfg, model_path=None, use_joystick=False, model_type=None,
         inputs += perfmon_outputs
         types += ['float', 'float', 'float']
         V.add(mon, inputs=[], outputs=perfmon_outputs, threaded=True)
+
+    if getattr(cfg, 'HAVE_BATTERY_MONITOR', False):
+        inputs += ['battery/voltage', 'battery/current', 'battery/power']
+        types += ['float', 'float', 'float']
 
     #
     # Create data storage part

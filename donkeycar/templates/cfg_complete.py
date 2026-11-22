@@ -778,6 +778,15 @@ HAVE_PERFMON = False
 SHOW_FPS = False
 FPS_DEBUG_INTERVAL = 10
 
+# Battery monitor (INA219 on I2C). Default addr 0x41 — 0x40 is usually PCA9685.
+# Install: uv pip install adafruit-circuitpython-ina219
+# Check: sudo i2cdetect -y 1   then: donkey battery
+HAVE_BATTERY_MONITOR = False
+BATTERY_INA_ADDRESS = 0x41
+BATTERY_INA_BUSNUM = 1
+BATTERY_LOG_EVERY_S = 5.0
+
+
 
 # TELEMETRY (MQTT)
 HAVE_MQTT_TELEMETRY = False

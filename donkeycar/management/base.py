@@ -610,6 +610,59 @@ class Gui(BaseCommand):
         main()
 
 
+class BatteryCheck(BaseCommand):
+    """
+    One-shot read of pack voltage via INA219.
+    Requires an INA219 on I2C (default addr 0x41; 0x40 is usually PCA9685).
+    """
+
+    def parse_args(self, args):
+        parser = argparse.ArgumentParser(
+            prog='battery',
+            description='Read LiPo / pack voltage from an INA219')
+        parser.add_argument('--address', default='0x41',
+                            help='I2C address of INA219 [default 0x41]')
+        parser.add_argument('--bus', default='1',
+                            help='I2C bus number [default 1]')
+        return parser.parse_args(args)
+
+    def run(self, args):
+        args = self.parse_args(args)
+        from donkeycar.parts.battery_monitor import read_once
+        address = int(args.address, 0)
+        busnum = int(args.bus)
+        print(f"Reading INA219 on bus {busnum} address {hex(address)} ...")
+        print("Tip: sudo i2cdetect -y 1  (PCA9685 is often 0x40; use 0x41+)")
+        try:
+            voltage, current, power = read_once(address=address, busnum=busnum)
+        except Exception as e:
+            print(f"Failed: {e}")
+            print("Install: uv pip install adafruit-circuitpython-ina219")
+            print("Or use a multimeter across the LiPo balance/main leads.")
+            return
+        print(f"Bus voltage: {voltage:.2f} V")
+        print(f"Current:     {current:.2f} A")
+        print(f"Power:       {power:.1f} W")
+        # Rough 2S / 3S guidance (LiPo resting)
+        if 6.0 <= voltage <= 8.6:
+            cells = 2
+            per = voltage / 2
+        elif 9.0 <= voltage <= 12.6:
+            cells = 3
+            per = voltage / 3
+        else:
+            cells = None
+            per = None
+        if cells:
+            print(f"Looks like ~{cells}S ({per:.2f} V/cell)")
+            if per < 3.5:
+                print("WARNING: pack is low — charge before calibrating/driving.")
+            elif per < 3.7:
+                print("Pack is getting low; charge soon.")
+            else:
+                print("Pack voltage looks OK for driving/calibration.")
+
+
 def execute_from_command_line():
     """
     This is the function linked to the "donkey" terminal command.
@@ -627,6 +680,7 @@ def execute_from_command_line():
         'train': Train,
         'models': ModelDatabase,
         'ui': Gui,
+        'battery': BatteryCheck,
     }
 
     args = sys.argv[:]

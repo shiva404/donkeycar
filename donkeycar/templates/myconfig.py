@@ -34,3 +34,8 @@ PWM_STEERING_THROTTLE = {
 
 # Camera: use "MOCK" until rpicam-hello --list-cameras works, then "PICAM"
 # CAMERA_TYPE = "PICAM"
+
+# Battery (INA219). PCA9685 is usually 0x40 — solder INA219 to 0x41+.
+# HAVE_BATTERY_MONITOR = True
+# BATTERY_INA_ADDRESS = 0x41
+# Then: donkey battery

@@ -55,6 +55,12 @@ Modular Python self-driving library for hobbyists (DIY Robocars): Raspberry Pi /
 - Read `PYTHON312_MIGRATION.md` before changing Python/TF/uv install guidance.
 - Dev install: `uv pip install -e ".[<extra>,dev]"`
 
+## Battery voltage
+
+- Fastest: multimeter on LiPo main leads (2S ~7.4V nominal, 3S ~11.1V). Charge if &lt; ~3.5V/cell.
+- On-car: INA219 on I2C (`donkeycar/parts/battery_monitor.py`). Default addr **0x41** (0x40 is PCA9685). `donkey battery` for a one-shot read; set `HAVE_BATTERY_MONITOR = True` in myconfig to log while driving.
+- Pi `Undervoltage detected` is the **5V Pi rail**, not the traction pack.
+
 ## Xbox controller (Pi)
 
 - Default template config: `CONTROLLER_TYPE = 'xbox'`, device `/dev/input/js0`.
