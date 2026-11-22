@@ -66,12 +66,25 @@ class Config:
 def load_config(config_path=None, myconfig="myconfig.py"):
     
     if config_path is None:
-        main_path = os.getcwd()
-        config_path = os.path.join(main_path, 'config.py')
-        if not os.path.exists(config_path):
-            local_config = os.path.join(os.path.curdir, 'config.py')
-            if os.path.exists(local_config):
-                config_path = local_config
+        # Prefer config.py next to the entry script (e.g. ~/mycar/manage.py),
+        # so `python ~/mycar/manage.py drive` works from any cwd. Fall back to cwd.
+        import sys
+        candidates = []
+        if sys.argv and sys.argv[0]:
+            script = sys.argv[0]
+            if not os.path.isabs(script):
+                script = os.path.join(os.getcwd(), script)
+            script_dir = os.path.dirname(os.path.realpath(script))
+            if script_dir:
+                candidates.append(os.path.join(script_dir, 'config.py'))
+        candidates.append(os.path.join(os.getcwd(), 'config.py'))
+        candidates.append(os.path.join(os.path.curdir, 'config.py'))
+
+        config_path = candidates[0]
+        for path in candidates:
+            if os.path.exists(path):
+                config_path = path
+                break
     
     logger.info(f'loading config file: {config_path}')
     cfg = Config()
