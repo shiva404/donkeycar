@@ -66,6 +66,7 @@ Modular Python self-driving library for hobbyists (DIY Robocars): Raspberry Pi /
 - Default template config: `CONTROLLER_TYPE = 'xbox'`, device `/dev/input/js0`.
 - Bluetooth Xbox pads on Raspberry Pi OS often need `disable_ertm=1`, `uhid`, and **xpadneo** when stock `hid-generic` fails to probe (see `XboxOneJoystick` in `donkeycar/parts/controller.py`).
 - Kernel headers package is `linux-headers-$(uname -r)` / `linux-headers-rpi-v8`, not the old `raspberrypi-kernel-headers`.
+- Diagnose pad→Pi vs car throttle: `donkey xbox` (optional `--device`, `--config`, `--swapped`, `--raw`). If DRIVE throttle moves when you pull RT/stick, Xbox→Pi is fine — next check `donkey calibrate` / ESC / `donkey battery`.
 
 ## Agent workflows
 

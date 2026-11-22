@@ -116,8 +116,11 @@ class Joystick(object):
         if self.jsdev is None:
             return button, button_state, axis, axis_val
 
-        # Main event loop
-        evbuf = self.jsdev.read(8)
+        # Main event loop (supports O_NONBLOCK for diagnostic tools)
+        try:
+            evbuf = self.jsdev.read(8)
+        except BlockingIOError:
+            return button, button_state, axis, axis_val
 
         if evbuf:
             tval, value, typev, number = struct.unpack('IhBB', evbuf)
@@ -1387,6 +1390,80 @@ class PyGamePS4JoystickController(PS4JoystickController):
 
 
 
+def xbox_trigger_magnitude(axis_val, reversed=False):
+    '''
+    Map an Xbox trigger axis to a 0..1 (or -1..0 if reversed) throttle magnitude.
+    Supports -1..1 (rest at -1) and 0..1 (rest at 0) ranges from different
+    Xbox/Linux drivers (xpadneo vs others).
+    '''
+    if axis_val < 0.0:
+        # classic -1..1 with rest near -1
+        magnitude = (axis_val + 1.0) / 2.0
+    else:
+        # 0..1 style with rest at 0
+        magnitude = axis_val
+    if reversed:
+        magnitude = -magnitude
+    return magnitude
+
+
+def xbox_drive_signals(axis_states,
+                       throttle_dir=-1.0,
+                       throttle_scale=1.0,
+                       steering_scale=1.0,
+                       swapped=False):
+    '''
+    Compute the same steering/throttle drive signals XboxOneJoystickController
+    would emit from current axis_states. Used by `donkey xbox` diagnostics.
+
+    Returns dict with raw axes, per-source mapped values, and active drive
+    steering/throttle (largest abs throttle source wins for display).
+    '''
+    axis_states = axis_states or {}
+
+    if swapped:
+        steer_raw = axis_states.get('right_stick_horz', 0.0)
+        stick_raw = axis_states.get('left_stick_vert', 0.0)
+        steer_axis = 'right_stick_horz'
+        stick_axis = 'left_stick_vert'
+    else:
+        steer_raw = axis_states.get('left_stick_horz', 0.0)
+        stick_raw = axis_states.get('right_stick_vert', 0.0)
+        steer_axis = 'left_stick_horz'
+        stick_axis = 'right_stick_vert'
+
+    rt_raw = axis_states.get('right_trigger', 0.0)
+    lt_raw = axis_states.get('left_trigger', 0.0)
+
+    stick_throttle = throttle_dir * stick_raw * throttle_scale
+    rt_throttle = throttle_dir * xbox_trigger_magnitude(rt_raw) * throttle_scale
+    lt_throttle = throttle_dir * xbox_trigger_magnitude(lt_raw, reversed=True) * throttle_scale
+    steering = steering_scale * steer_raw
+
+    sources = {
+        'stick': stick_throttle,
+        'right_trigger': rt_throttle,
+        'left_trigger': lt_throttle,
+    }
+    active_name, active_throttle = max(
+        sources.items(), key=lambda kv: abs(kv[1]))
+
+    return {
+        'steer_axis': steer_axis,
+        'stick_axis': stick_axis,
+        'steer_raw': steer_raw,
+        'stick_raw': stick_raw,
+        'right_trigger_raw': rt_raw,
+        'left_trigger_raw': lt_raw,
+        'steering': steering,
+        'stick_throttle': stick_throttle,
+        'right_trigger_throttle': rt_throttle,
+        'left_trigger_throttle': lt_throttle,
+        'active_throttle_source': active_name,
+        'throttle': active_throttle,
+    }
+
+
 class XboxOneJoystickController(JoystickController):
     '''
     A Controller object that maps inputs to actions
@@ -1412,20 +1489,7 @@ class XboxOneJoystickController(JoystickController):
 
     def magnitude(self, reversed=False):
         def set_magnitude(axis_val):
-            '''
-            Map trigger axis to throttle.
-            Supports -1..1 (rest at -1) and 0..1 (rest at 0) ranges from
-            different Xbox/Linux drivers (xpadneo vs others).
-            '''
-            if axis_val < 0.0:
-                # classic -1..1 with rest near -1
-                magnitude = (axis_val + 1.0) / 2.0
-            else:
-                # 0..1 style with rest at 0
-                magnitude = axis_val
-            if reversed:
-                magnitude = -magnitude
-            self.set_throttle(magnitude)
+            self.set_throttle(xbox_trigger_magnitude(axis_val, reversed=reversed))
         return set_magnitude
 
 

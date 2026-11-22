@@ -611,6 +611,155 @@ class Gui(BaseCommand):
         main()
 
 
+class XboxCheck(BaseCommand):
+    """
+    Live Xbox (or compatible) joystick probe: print raw axes and the same
+    steering/throttle drive signals drive.py would use. Separates Xbox→Pi
+    link failures from car/ESC/PWM throttle problems.
+    """
+
+    def parse_args(self, args):
+        parser = argparse.ArgumentParser(
+            prog='xbox',
+            description='Probe Xbox controller throttle/steering signals')
+        parser.add_argument(
+            '--device', default=None,
+            help='Joystick device [default: config JOYSTICK_DEVICE_FILE '
+                 'or /dev/input/js0]')
+        parser.add_argument('--config', default='./config.py', help=HELP_CONFIG)
+        parser.add_argument(
+            '--swapped', action='store_true',
+            help='Use xboxswapped stick mapping (or CONTROLLER_TYPE)')
+        parser.add_argument(
+            '--interval', type=float, default=0.1,
+            help='Seconds between status lines [default 0.1]')
+        parser.add_argument(
+            '--raw', action='store_true',
+            help='Also print every axis/button event as it arrives')
+        return parser.parse_args(args)
+
+    def run(self, args):
+        args = self.parse_args(args)
+        from donkeycar.parts.controller import (
+            XboxOneJoystick, xbox_drive_signals)
+
+        throttle_dir = -1.0
+        throttle_scale = 0.5
+        steering_scale = 1.0
+        swapped = args.swapped
+        device = args.device or '/dev/input/js0'
+
+        cfg = None
+        config_path = os.path.expanduser(args.config)
+        if os.path.exists(config_path):
+            cfg = load_config(args.config)
+        elif args.config != './config.py':
+            print(f"No config at {config_path}; using xbox defaults.")
+
+        if cfg is not None:
+            device = args.device or getattr(
+                cfg, 'JOYSTICK_DEVICE_FILE', device)
+            throttle_dir = getattr(cfg, 'JOYSTICK_THROTTLE_DIR', throttle_dir)
+            throttle_scale = getattr(
+                cfg, 'JOYSTICK_MAX_THROTTLE', throttle_scale)
+            steering_scale = getattr(
+                cfg, 'JOYSTICK_STEERING_SCALE', steering_scale)
+            ctype = getattr(cfg, 'CONTROLLER_TYPE', 'xbox')
+            if not args.swapped and ctype == 'xboxswapped':
+                swapped = True
+
+        print(f"Opening {device} ...")
+        if not os.path.exists(device):
+            print(f"FAIL: {device} not found.")
+            print("This is an Xbox→Pi problem (pad not exposing a joystick).")
+            print("On Raspberry Pi Bluetooth Xbox pads, check:")
+            print("  disable_ertm=1, uhid, xpadneo, then jstest --normal "
+                  f"{device}")
+            print("See XboxOneJoystick docstring in donkeycar/parts/"
+                  "controller.py")
+            return
+
+        js = XboxOneJoystick(device)
+        if not js.init():
+            print(f"FAIL: could not init joystick at {device}.")
+            print("This is an Xbox→Pi problem.")
+            return
+
+        # Non-blocking so we can refresh a status line while draining events.
+        try:
+            import fcntl
+            flags = fcntl.fcntl(js.jsdev, fcntl.F_GETFL)
+            fcntl.fcntl(js.jsdev, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+        except Exception as e:
+            print(f"Warning: could not set non-blocking I/O ({e}); "
+                  "status may only update on events.")
+
+        print(f"OK: device name: {getattr(js, 'js_name', '(unknown)')}")
+        js.show_map()
+        print()
+        print("Mapped like drive.py (xbox defaults):")
+        if swapped:
+            print("  steering <- right_stick_horz")
+            print("  throttle <- left_stick_vert, also LT/RT")
+        else:
+            print("  steering <- left_stick_horz")
+            print("  throttle <- right_stick_vert, also LT/RT")
+        print(f"  JOYSTICK_THROTTLE_DIR={throttle_dir}  "
+              f"JOYSTICK_MAX_THROTTLE={throttle_scale}  "
+              f"JOYSTICK_STEERING_SCALE={steering_scale}")
+        print()
+        print("Move sticks / pull RT (forward) / LT (reverse). Ctrl+C to stop.")
+        print("If these numbers change, Xbox→Pi is fine — check ESC/PWM/"
+              "battery next (donkey calibrate, donkey battery).")
+        print("If nothing changes, fix the controller link first.")
+        print()
+
+        try:
+            while True:
+                # Drain queued events
+                while True:
+                    button, button_state, axis, axis_val = js.poll()
+                    if button is None and axis is None:
+                        break
+                    if args.raw:
+                        if axis is not None:
+                            print(f"  event axis {axis}={axis_val:+.3f}")
+                        if button is not None:
+                            print(f"  event button {button} "
+                                  f"state={button_state}")
+
+                sig = xbox_drive_signals(
+                    js.axis_states,
+                    throttle_dir=throttle_dir,
+                    throttle_scale=throttle_scale,
+                    steering_scale=steering_scale,
+                    swapped=swapped)
+
+                line = (
+                    f"steer {sig['steer_axis']} raw={sig['steer_raw']:+.3f} "
+                    f"-> {sig['steering']:+.3f} | "
+                    f"stick {sig['stick_axis']} raw={sig['stick_raw']:+.3f} "
+                    f"-> thr {sig['stick_throttle']:+.3f} | "
+                    f"RT raw={sig['right_trigger_raw']:+.3f} "
+                    f"-> {sig['right_trigger_throttle']:+.3f} | "
+                    f"LT raw={sig['left_trigger_raw']:+.3f} "
+                    f"-> {sig['left_trigger_throttle']:+.3f} | "
+                    f"DRIVE throttle={sig['throttle']:+.3f} "
+                    f"(from {sig['active_throttle_source']})"
+                )
+                # Carriage-return refresh unless logging raw events
+                if args.raw:
+                    print(line)
+                else:
+                    print('\r' + line + '   ', end='', flush=True)
+                time.sleep(args.interval)
+        except KeyboardInterrupt:
+            print()
+            print("Stopped.")
+            print("Remember: changing DRIVE throttle here only proves the "
+                  "pad→Pi signal. Motors need manage.py drive + working ESC.")
+
+
 class BatteryCheck(BaseCommand):
     """
     Interpret pack health from a multimeter reading, or read/watch an INA219.
@@ -704,6 +853,7 @@ def execute_from_command_line():
         'models': ModelDatabase,
         'ui': Gui,
         'battery': BatteryCheck,
+        'xbox': XboxCheck,
     }
 
     args = sys.argv[:]
