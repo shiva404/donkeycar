@@ -651,18 +651,45 @@ class PyGamePS4Joystick(PyGameJoystick):
 class XboxOneJoystick(Joystick):
     '''
     An interface to a physical joystick 'Xbox Wireless Controller' controller.
-    This will generally show up on /dev/input/js0.
-    - Note that this code presumes the built-in linux driver for 'Xbox Wireless Controller'.
-      There is another user land driver called xboxdrv; this code has not been tested
-      with that driver.
-    - Note that this controller requires that the bluetooth disable_ertm parameter
-      be set to true; to do this:
-      - edit /etc/modprobe.d/xbox_bt.conf
-      - add the line: options bluetooth disable_ertm=1
-      - reboot to tha this take affect.
-      - after reboot you can vertify that disable_ertm is set to true entering this
-        command oin a terminal: cat /sys/module/bluetooth/parameters/disable_ertm
-      - the result should print 'Y'.  If not, make sure the above steps have been done corretly.
+    This will generally show up on /dev/input/js0. Set CONTROLLER_TYPE = 'xbox'
+    (or 'xboxswapped') in myconfig.py.
+
+    Bluetooth setup on Raspberry Pi OS (incl. Lite / Trixie):
+
+    1. Install BlueZ if needed (creates the bluetooth group on Lite images)::
+
+        sudo apt install -y bluez bluetooth pi-bluetooth
+        sudo usermod -aG bluetooth $USER
+
+    2. Disable Bluetooth ERTM (required or the pad connects then drops)::
+
+        echo 'options bluetooth disable_ertm=1' | sudo tee /etc/modprobe.d/xbox_bt.conf
+        sudo reboot
+        # verify: cat /sys/module/bluetooth/parameters/disable_ertm  -> Y
+
+    3. Load modules BlueZ needs for HID gamepads, then pair with bluetoothctl
+       (agent on, scan on, sync button on the pad, connect + trust MAC).
+
+    4. Modern Xbox firmware often fails with stock hid-generic/microsoft drivers
+       (dmesg: "parse failed" / error -22) while bluetoothctl still shows
+       Connected: yes and no /dev/input/js0. Install xpadneo + uhid::
+
+        sudo modprobe uhid
+        sudo apt install -y dkms build-essential git joystick \\
+            linux-headers-$(uname -r)
+        # On Pi OS Bookworm/Trixie, raspberrypi-kernel-headers is gone; if the
+        # exact headers package is missing use linux-headers-rpi-v8 (64-bit)
+        # or linux-headers-rpi-v7l (32-bit).
+        git clone https://github.com/atar-axis/xpadneo.git
+        cd xpadneo && sudo ./install.sh
+        echo -e 'uhid\\njoydev\\nhid_xpadneo' | \\
+            sudo tee /etc/modules-load.d/xbox-gamepad.conf
+        sudo reboot
+
+    5. Confirm /dev/input/js0 exists, then jstest --normal /dev/input/js0.
+
+    USB works without xpadneo for many pads. xboxdrv is untested here.
+    Prefer a solid 5V/3A+ Pi PSU; undervoltage breaks Bluetooth HID.
 
     credit:
     https://github.com/Ezward/donkeypart_ps3_controller/blob/master/donkeypart_ps3_controller/part.py

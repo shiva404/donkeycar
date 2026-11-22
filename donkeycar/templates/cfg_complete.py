@@ -123,7 +123,10 @@ JOYSTICK_THROTTLE_DIR = -1.0
 JOYSTICK_DEVICE_FILE = "/dev/input/js0"
 
 # The type of controller being used.
-# Options: 'ps3', 'ps4', 'xbox', 'nimbus', 'wiiu', 'F710', 'rc3', 'MM1 (use for RC Hat)', 'custom'
+# Options: 'ps3', 'ps4', 'xbox', 'xboxswapped', 'nimbus', 'wiiu', 'F710', 'rc3',
+# 'MM1 (use for RC Hat)', 'custom'
+# Xbox Bluetooth on Pi: disable_ertm=1, load uhid, and usually install xpadneo
+# so /dev/input/js0 appears (see XboxOneJoystick docstring in controller.py).
 CONTROLLER_TYPE = 'xbox'
 
 # Enable listening for remote joystick control over the network.

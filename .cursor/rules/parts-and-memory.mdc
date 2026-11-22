@@ -1,0 +1,15 @@
+---
+description: Parts communicate only through Vehicle Memory keys
+globs: donkeycar/parts/**/*.py,donkeycar/templates/**/*.py,donkeycar/vehicle.py,donkeycar/memory.py
+alwaysApply: false
+---
+
+# Parts talk through Memory
+
+Shared state is the `Memory` dict bus (`donkeycar/memory.py`), not hidden globals.
+
+- Parts read inputs and write outputs by key via `Vehicle.add`.
+- Do not couple parts by importing each other for runtime data.
+- Keep `run` small; heavy I/O belongs in threaded parts (`threaded=True`).
+- Templates (`donkeycar/templates/`) are what users run — update them for first-class features.
+- See workflow: `.cursor/workflows/add-part.md`

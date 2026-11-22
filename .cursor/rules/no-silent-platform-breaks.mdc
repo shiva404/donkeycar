@@ -1,0 +1,13 @@
+---
+description: Do not silently break Pi/Nano/Mac/PC Python or TF assumptions
+globs: pyproject.toml,PYTHON312_MIGRATION.md,README.md,Dockerfile,Makefile
+alwaysApply: false
+---
+
+# No silent platform breaks
+
+Supported: Raspberry Pi OS, Jetson Nano, Linux, macOS, WSL.
+
+- Do not bump Python, TensorFlow, or camera assumptions without updating `pyproject.toml` extras and `PYTHON312_MIGRATION.md` / install docs.
+- Pi camera needs Debian `libcamera`/`picamera2` + venv `--system-site-packages` — do not remove that path.
+- Prefer additive extras over one stack for every platform (TF on PC/Mac; TFLite/`ai-edge-litert` on Pi).

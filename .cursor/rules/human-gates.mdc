@@ -1,0 +1,10 @@
+---
+description: Actions that require explicit human approval
+alwaysApply: true
+---
+
+# Human gates
+
+- Never merge, deploy, publish, or force-push without an explicit ask.
+- Never post externally (Discord, others' GitHub threads, social) as the user — draft text instead.
+- Broad new features: prefer an Issue discussion before a large PR (`CONTRIBUTING.md`).

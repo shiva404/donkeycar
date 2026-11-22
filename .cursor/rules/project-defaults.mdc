@@ -1,0 +1,20 @@
+---
+description: Core Donkeycar agent defaults (platforms, tooling, PR hygiene)
+alwaysApply: true
+---
+
+# Project defaults
+
+- Modular self-driving library: `Vehicle` + `Memory` bus + parts/templates.
+- CLI entry: `donkey` → `donkeycar.management.base:execute_from_command_line`.
+- Prefer small PRs; ask before merge/deploy/PyPI publish.
+- Never invent hardware APIs — check `donkeycar/parts/` and docs first.
+- Platforms: Raspberry Pi OS, Jetson Nano, Linux, macOS, WSL.
+- Prefer editing existing parts/templates; keep commented `myconfig` / `cfg_*.py` style.
+- Broadly useful features only; niche hardware belongs in a fork unless an Issue agrees.
+- PEP-8; tests for behavior changes (`make tests` / `uv run pytest`); no monkey-patching.
+- Python `>=3.12,<3.14` via **uv** (not conda). Extras: `[pi]`, `[macos]`, `[pc]`, `[nano]`, `[torch]`, `[dev]`.
+- Mac/PC: Python 3.12 + TF 2.19. Pi: Python 3.13 + system-site-packages for `picamera2`.
+- See `PYTHON312_MIGRATION.md` and `AGENTS.md` before changing install/stack guidance.
+- User docs: separate repo `autorope/donkeydocs`.
+- Workflows: `.cursor/workflows/`.
